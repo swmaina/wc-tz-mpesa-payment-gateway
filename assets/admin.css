@@ -1,0 +1,18 @@
+/* M-Pesa Gateway Admin Styles */
+
+#woocommerce_mpesa_public_key,
+#woocommerce_mpesa_api_key {
+    font-family: 'Courier New', monospace;
+}
+
+.woocommerce_mpesa_icon {
+    max-width: 50px;
+    height: auto;
+}
+
+#mpesa-setup-notice {
+    border-left: 4px solid #0071a1;
+    padding: 12px;
+    margin: 5px 0 15px;
+    background-color: #f5f7fa;
+}
