@@ -1,5 +1,25 @@
 {
   "require": {
-    "php": ">=7.2"
+    "php": ">=7.2"{
+  "name": "yourusername/wc-gateway-mpesa",
+  "description": "WooCommerce M-Pesa Payment Gateway",
+  "type": "wordpress-plugin",
+  "license": "GPL-2.0-or-later",
+  "authors": [
+    {
+      "name": "Your Name",
+      "email": "your@email.com"
+    }
+  ],
+  "require": {
+    "php": ">=7.4",
+    "karson/mpesa-php-sdk": "^1.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "WC_Gateway_Mpesa\\": "includes/"
+    }
+  }
+}
   }
 }
