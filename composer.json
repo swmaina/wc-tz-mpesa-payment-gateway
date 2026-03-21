@@ -1,6 +1,4 @@
 {
-  "require": {
-    "php": ">=7.2"{
   "name": "yourusername/wc-gateway-mpesa",
   "description": "WooCommerce M-Pesa Payment Gateway",
   "type": "wordpress-plugin",
@@ -19,7 +17,5 @@
     "psr-4": {
       "WC_Gateway_Mpesa\\": "includes/"
     }
-  }
-}
   }
 }

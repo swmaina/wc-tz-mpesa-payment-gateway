@@ -26,14 +26,47 @@ class WC_Gateway_Mpesa_Dependency_Loader
             return false;
         }
 
-        // Load autoloader
-        if (file_exists($vendor_dir . '/autoload.php')) {
-            require_once $vendor_dir . '/autoload.php';
-            return true;
-        }
+        // Load dependencies manually
+        self::load_dependencies_manually();
+        return true;
+    }
 
-        self::show_vendor_error();
-        return false;
+    /**
+     * Load dependencies manually without Composer autoloader
+     */
+    private static function load_dependencies_manually()
+    {
+        $base_path = WC_GATEWAY_MPESA_PLUGIN_DIR . 'vendor/';
+
+        // Load Guzzle classes (simplified - only load what's needed)
+        require_once $base_path . 'guzzlehttp/guzzle/src/functions.php';
+        require_once $base_path . 'guzzlehttp/guzzle/src/Client.php';
+        // Add more Guzzle files as needed
+
+        // Load M-Pesa SDK classes
+        $sdk_files = array(
+            'karson/mpesa-php-sdk/src/Exceptions/MpesaException.php',
+            'karson/mpesa-php-sdk/src/Exceptions/ValidationException.php',
+            'karson/mpesa-php-sdk/src/Exceptions/AuthenticationException.php',
+            'karson/mpesa-php-sdk/src/Exceptions/ApiException.php',
+            'karson/mpesa-php-sdk/src/Constants/ResponseCodes.php',
+            'karson/mpesa-php-sdk/src/Constants/TransactionStatus.php',
+            'karson/mpesa-php-sdk/src/Validation/ParameterValidator.php',
+            'karson/mpesa-php-sdk/src/Response/BaseResponse.php',
+            'karson/mpesa-php-sdk/src/Response/TransactionResponse.php',
+            'karson/mpesa-php-sdk/src/Response/TransactionStatusResponse.php',
+            'karson/mpesa-php-sdk/src/Response/CustomerNameResponse.php',
+            'karson/mpesa-php-sdk/src/Response/ReversalResponse.php',
+            'karson/mpesa-php-sdk/src/Auth/TokenManager.php',
+            'karson/mpesa-php-sdk/src/Mpesa.php',
+        );
+
+        foreach ($sdk_files as $file) {
+            $full_path = $base_path . $file;
+            if (file_exists($full_path)) {
+                require_once $full_path;
+            }
+        }
     }
 
     /**
