@@ -247,15 +247,44 @@ class WC_Gateway_Mpesa extends WC_Payment_Gateway
             return array('result' => 'fail');
         }
 
-        // Verify nonce
-        $nonce = isset($_POST['wc_' . $this->id . '_nonce']) ? sanitize_text_field($_POST['wc_' . $this->id . '_nonce']) : '';
-        if (!wp_verify_nonce($nonce, 'wc_' . $this->id . '_process')) {
+        // Determine if this is a Blocks or Classic checkout and get phone/nonce accordingly
+        $is_blocks_checkout = false;
+        $phone = '';
+        $nonce = '';
+
+        // Check for Blocks checkout data first
+        if (isset($_POST['payment_method_data'])) {
+            $payment_method_data = $_POST['payment_method_data'];
+            if (is_string($payment_method_data)) {
+                parse_str($payment_method_data, $payment_method_data);
+            }
+
+            if (isset($payment_method_data['mpesa'])) {
+                $mpesa_data = $payment_method_data['mpesa'];
+                if (is_string($mpesa_data)) {
+                    parse_str($mpesa_data, $mpesa_data);
+                }
+
+                if (isset($mpesa_data['phone'])) {
+                    $phone = sanitize_text_field($mpesa_data['phone']);
+                    $nonce = isset($mpesa_data['nonce']) ? sanitize_text_field($mpesa_data['nonce']) : '';
+                    $is_blocks_checkout = true;
+                }
+            }
+        }
+
+        // If not Blocks checkout, try Classic checkout
+        if (!$is_blocks_checkout) {
+            $phone = isset($_POST[$this->id . '_phone']) ? sanitize_text_field($_POST[$this->id . '_phone']) : '';
+            $nonce = isset($_POST['wc_' . $this->id . '_nonce']) ? sanitize_text_field($_POST['wc_' . $this->id . '_nonce']) : '';
+        }
+
+        // Verify nonce based on checkout type
+        $nonce_action = $is_blocks_checkout ? 'wc_mpesa_blocks_nonce' : ('wc_' . $this->id . '_process');
+        if (!wp_verify_nonce($nonce, $nonce_action)) {
             wc_add_notice(__('Security check failed. Please try again.', 'wc-gateway-mpesa'), 'error');
             return array('result' => 'fail');
         }
-
-        // Get phone number
-        $phone = isset($_POST[$this->id . '_phone']) ? sanitize_text_field($_POST[$this->id . '_phone']) : '';
 
         if (empty($phone)) {
             wc_add_notice(__('M-Pesa phone number is required.', 'wc-gateway-mpesa'), 'error');

@@ -93,6 +93,27 @@ class WC_Gateway_Mpesa_Dependency_Loader
     {
         return class_exists('Karson\MpesaPhpSdk\Mpesa');
     }
+
+    /**
+     * Load Blocks integration if WooCommerce supports it
+     */
+    public static function load_blocks_integration()
+    {
+        // Check if WooCommerce version is 8.0 or higher
+        if (!defined('WC_VERSION') || version_compare(WC_VERSION, '8.0', '<')) {
+            return false;
+        }
+
+        // Check if the Blocks interface is available
+        if (!class_exists('Automattic\WooCommerce\Blocks\Payments\Integrations\PaymentMethodTypeInterface')) {
+            return false;
+        }
+
+        // Load the Blocks gateway class
+        require_once WC_GATEWAY_MPESA_PLUGIN_DIR . 'includes/class-gateway-blocks.php';
+
+        return true;
+    }
 }
 
 // Load dependencies

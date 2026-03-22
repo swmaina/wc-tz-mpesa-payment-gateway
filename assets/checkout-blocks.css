@@ -1,0 +1,97 @@
+/**
+ * M-Pesa Payment Gateway - WooCommerce Blocks Checkout Styles
+ *
+ * @package WC_Gateway_Mpesa\Blocks
+ */
+
+/* M-Pesa payment method container */
+.wc-block-payment-method-mpesa {
+    display: block;
+    margin-bottom: 1em;
+}
+
+/* Phone number input field */
+#mpesa-phone-number {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 1em;
+    font-family: inherit;
+    box-sizing: border-box;
+    transition: border-color 0.3s ease;
+}
+
+#mpesa-phone-number:focus {
+    outline: none;
+    border-color: #0066cc;
+    box-shadow: 0 0 0 1px #0066cc;
+}
+
+/* Error state */
+#mpesa-phone-number.error {
+    border-color: #d32f2f;
+}
+
+#mpesa-phone-number.error:focus {
+    box-shadow: 0 0 0 1px #d32f2f;
+}
+
+/* Error message */
+.mpesa-error-message {
+    color: #d32f2f;
+    margin-top: 0.5em;
+    margin-bottom: 0;
+    font-size: 0.875em;
+    display: block;
+}
+
+/* Phone label */
+.mpesa-phone-label {
+    display: block;
+    margin-bottom: 0.5em;
+    font-weight: 500;
+    color: #333;
+}
+
+.mpesa-phone-label .required {
+    color: #d32f2f;
+}
+
+/* Payment method description */
+.mpesa-payment-description {
+    margin-bottom: 1em;
+    color: #555;
+    font-size: 0.95em;
+}
+
+/* Phone number input group wrapper */
+.mpesa-phone-input-group {
+    margin-bottom: 1em;
+}
+
+/* Loading state */
+.mpesa-payment-method.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Success state */
+.mpesa-payment-method.success {
+    border-left: 4px solid #4caf50;
+    padding-left: 12px;
+}
+
+/* Payment method icon */
+.mpesa-payment-icon {
+    height: 24px;
+    width: 24px;
+    object-fit: contain;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+    #mpesa-phone-number {
+        font-size: 16px; /* Prevents zoom on iOS */
+    }
+}

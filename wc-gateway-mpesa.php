@@ -4,8 +4,8 @@
  * Plugin URI: https://github.com/yourusername/wc-gateway-mpesa
  * Description: Accept M-Pesa payments in your WooCommerce store. Works with Tanzanian and East African M-Pesa providers.
  * Version: 1.0.0
- * Author: Your Name
- * Author URI: https://yoursite.com
+ * Author: MindSafe Solutions
+ * Author URI: https://mindsafe.co.ke
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: wc-gateway-mpesa
@@ -21,9 +21,22 @@ if (!defined('ABSPATH')) {
 
 // Define plugin constants
 define('WC_GATEWAY_MPESA_VERSION', '1.0.0');
+define('WC_GATEWAY_MPESA_PLUGIN_FILE', __FILE__);
 define('WC_GATEWAY_MPESA_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('WC_GATEWAY_MPESA_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('WC_GATEWAY_MPESA_BASENAME', plugin_basename(__FILE__));
+
+// ─── Declare HPOS Compatibility ───────────────────────────────────────────────
+// Add this near the top of your plugin
+add_action( 'before_woocommerce_init', function() {
+	if ( class_exists( '\Automattic\WooCommerce\Utilities\FeaturesUtil' ) ) {
+		\Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility(
+			'custom_order_tables',
+			__FILE__,
+			true // true = compatible, false = not compatible
+		);
+	}
+} );
 
 /**
  * Main plugin class
@@ -127,8 +140,14 @@ class WC_Gateway_Mpesa_Plugin
         // Load dependencies
         $this->load_dependencies();
 
+        // Declare Blocks compatibility
+        $this->declare_blocks_compatibility();
+
         // Register payment gateway
         add_filter('woocommerce_payment_gateways', array($this, 'add_gateway'));
+
+        // Register Blocks payment method
+        add_action('woocommerce_blocks_payment_method_type_registration', array($this, 'register_blocks_payment_method'));
 
         // Add gateway settings link
         add_filter('plugin_action_links_' . WC_GATEWAY_MPESA_BASENAME, array($this, 'add_settings_link'));
@@ -144,6 +163,9 @@ class WC_Gateway_Mpesa_Plugin
         require_once WC_GATEWAY_MPESA_PLUGIN_DIR . 'includes/class-admin.php';
         require_once WC_GATEWAY_MPESA_PLUGIN_DIR . 'includes/class-gateway.php';
 
+        // Load Blocks integration if available
+        WC_Gateway_Mpesa_Dependency_Loader::load_blocks_integration();
+
         // Initialize admin class
         new WC_Gateway_Mpesa_Admin();
     }
@@ -155,6 +177,47 @@ class WC_Gateway_Mpesa_Plugin
     {
         $gateways[] = 'WC_Gateway_Mpesa';
         return $gateways;
+    }
+
+    /**
+     * Declare Blocks compatibility for WooCommerce Blocks checkout
+     */
+    private function declare_blocks_compatibility()
+    {
+        // Only declare compatibility if WooCommerce Blocks is available
+        if (class_exists('\Automattic\WooCommerce\Utilities\FeaturesUtil')) {
+            \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility(
+                'cart_checkout_blocks',
+                WC_GATEWAY_MPESA_PLUGIN_FILE,
+                true
+            );
+        }
+    }
+
+    /**
+     * Register Blocks payment method type
+     *
+     * @param \Automattic\WooCommerce\Blocks\Payments\PaymentMethodRegistry $payment_method_registry Payment method registry.
+     */
+    public function register_blocks_payment_method($payment_method_registry)
+    {
+        // Only proceed if Blocks integration is available
+        if (!class_exists('WC_Gateway_Mpesa_Blocks')) {
+            return;
+        }
+
+        // Get the gateway instance
+        $gateways = WC()->payment_gateways()->get_available_payment_gateways();
+        if (!isset($gateways['mpesa'])) {
+            return;
+        }
+
+        $gateway = $gateways['mpesa'];
+
+        // Register the Blocks payment method
+        $payment_method_registry->register(
+            new WC_Gateway_Mpesa_Blocks($gateway)
+        );
     }
 
     /**
