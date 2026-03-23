@@ -18,55 +18,17 @@ class WC_Gateway_Mpesa_Dependency_Loader
      */
     public static function load()
     {
-        $vendor_dir = WC_GATEWAY_MPESA_PLUGIN_DIR . 'vendor';
+        $autoload_file = WC_GATEWAY_MPESA_PLUGIN_DIR . 'vendor/autoload.php';
 
-        // Check if vendor directory exists
-        if (!file_exists($vendor_dir)) {
+        // Check if vendor autoloader exists
+        if (!file_exists($autoload_file)) {
             self::show_vendor_error();
             return false;
         }
 
-        // Load dependencies manually
-        self::load_dependencies_manually();
+        // Load dependencies via Composer
+        require_once $autoload_file;
         return true;
-    }
-
-    /**
-     * Load dependencies manually without Composer autoloader
-     */
-    private static function load_dependencies_manually()
-    {
-        $base_path = WC_GATEWAY_MPESA_PLUGIN_DIR . 'vendor/';
-
-        // Load Guzzle classes (simplified - only load what's needed)
-        require_once $base_path . 'guzzlehttp/guzzle/src/functions.php';
-        require_once $base_path . 'guzzlehttp/guzzle/src/Client.php';
-        // Add more Guzzle files as needed
-
-        // Load M-Pesa SDK classes
-        $sdk_files = array(
-            'karson/mpesa-php-sdk/src/Exceptions/MpesaException.php',
-            'karson/mpesa-php-sdk/src/Exceptions/ValidationException.php',
-            'karson/mpesa-php-sdk/src/Exceptions/AuthenticationException.php',
-            'karson/mpesa-php-sdk/src/Exceptions/ApiException.php',
-            'karson/mpesa-php-sdk/src/Constants/ResponseCodes.php',
-            'karson/mpesa-php-sdk/src/Constants/TransactionStatus.php',
-            'karson/mpesa-php-sdk/src/Validation/ParameterValidator.php',
-            'karson/mpesa-php-sdk/src/Response/BaseResponse.php',
-            'karson/mpesa-php-sdk/src/Response/TransactionResponse.php',
-            'karson/mpesa-php-sdk/src/Response/TransactionStatusResponse.php',
-            'karson/mpesa-php-sdk/src/Response/CustomerNameResponse.php',
-            'karson/mpesa-php-sdk/src/Response/ReversalResponse.php',
-            'karson/mpesa-php-sdk/src/Auth/TokenManager.php',
-            'karson/mpesa-php-sdk/src/Mpesa.php',
-        );
-
-        foreach ($sdk_files as $file) {
-            $full_path = $base_path . $file;
-            if (file_exists($full_path)) {
-                require_once $full_path;
-            }
-        }
     }
 
     /**
@@ -79,8 +41,8 @@ class WC_Gateway_Mpesa_Dependency_Loader
                 '<div class="notice notice-error"><p><strong>%s</strong> %s</p></div>',
                 esc_html__('WooCommerce M-Pesa Gateway:', 'wc-gateway-mpesa'),
                 sprintf(
-                    esc_html__('Required dependencies are missing. Please %s to activate the plugin.', 'wc-gateway-mpesa'),
-                    '<a href="' . esc_url(wp_nonce_url(self_admin_url('plugins.php?action=activate&plugin=' . WC_GATEWAY_MPESA_BASENAME), 'activate-plugin_' . WC_GATEWAY_MPESA_BASENAME)) . '">reinstall</a>'
+                    esc_html__('Required dependencies are missing. Please run %s inside the plugin directory to install dependencies.', 'wc-gateway-mpesa'),
+                    '<code>composer install</code>'
                 )
             );
         });
