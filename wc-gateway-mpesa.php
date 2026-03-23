@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: WooCommerce M-Pesa Payment Gateway
- * Plugin URI: https://github.com/yourusername/wc-gateway-mpesa
+ * Plugin URI: https://github.com/swmaina/wc-gateway-mpesa
  * Description: Accept M-Pesa payments in your WooCommerce store. Works with Tanzanian and East African M-Pesa providers.
  * Version: 1.0.0
  * Author: MindSafe Solutions
@@ -26,17 +26,22 @@ define('WC_GATEWAY_MPESA_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('WC_GATEWAY_MPESA_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('WC_GATEWAY_MPESA_BASENAME', plugin_basename(__FILE__));
 
-// ─── Declare HPOS Compatibility ───────────────────────────────────────────────
+// ─── Declare HPOS and Blocks Compatibility ────────────────────────────────────
 // Add this near the top of your plugin
-add_action( 'before_woocommerce_init', function() {
-	if ( class_exists( '\Automattic\WooCommerce\Utilities\FeaturesUtil' ) ) {
-		\Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility(
-			'custom_order_tables',
-			__FILE__,
-			true // true = compatible, false = not compatible
-		);
-	}
-} );
+add_action('before_woocommerce_init', function () {
+    if (class_exists('\Automattic\WooCommerce\Utilities\FeaturesUtil')) {
+        \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility(
+            'custom_order_tables',
+            __FILE__,
+            true // true = compatible, false = not compatible
+        );
+        \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility(
+            'cart_checkout_blocks',
+            __FILE__,
+            true
+        );
+    }
+});
 
 /**
  * Main plugin class
@@ -63,10 +68,10 @@ class WC_Gateway_Mpesa_Plugin
     {
         // Check dependencies
         add_action('plugins_loaded', array($this, 'check_dependencies'));
-        
+
         // Load translations
         add_action('plugins_loaded', array($this, 'load_textdomain'));
-        
+
         // Initialize plugin
         add_action('plugins_loaded', array($this, 'init'), 10);
     }
@@ -140,9 +145,6 @@ class WC_Gateway_Mpesa_Plugin
         // Load dependencies
         $this->load_dependencies();
 
-        // Declare Blocks compatibility
-        $this->declare_blocks_compatibility();
-
         // Register payment gateway
         add_filter('woocommerce_payment_gateways', array($this, 'add_gateway'));
 
@@ -179,20 +181,7 @@ class WC_Gateway_Mpesa_Plugin
         return $gateways;
     }
 
-    /**
-     * Declare Blocks compatibility for WooCommerce Blocks checkout
-     */
-    private function declare_blocks_compatibility()
-    {
-        // Only declare compatibility if WooCommerce Blocks is available
-        if (class_exists('\Automattic\WooCommerce\Utilities\FeaturesUtil')) {
-            \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility(
-                'cart_checkout_blocks',
-                WC_GATEWAY_MPESA_PLUGIN_FILE,
-                true
-            );
-        }
-    }
+
 
     /**
      * Register Blocks payment method type
