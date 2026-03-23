@@ -32,12 +32,12 @@ add_action('before_woocommerce_init', function () {
     if (class_exists('\Automattic\WooCommerce\Utilities\FeaturesUtil')) {
         \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility(
             'custom_order_tables',
-            __FILE__,
+            plugin_basename(__FILE__),
             true // true = compatible, false = not compatible
         );
         \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility(
             'cart_checkout_blocks',
-            __FILE__,
+            plugin_basename(__FILE__),
             true
         );
     }
@@ -196,7 +196,7 @@ class WC_Gateway_Mpesa_Plugin
         }
 
         // Get the gateway instance
-        $gateways = WC()->payment_gateways()->get_available_payment_gateways();
+        $gateways = WC()->payment_gateways()->payment_gateways();
         if (!isset($gateways['mpesa'])) {
             return;
         }

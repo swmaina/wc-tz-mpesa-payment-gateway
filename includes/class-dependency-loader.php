@@ -18,34 +18,7 @@ class WC_Gateway_Mpesa_Dependency_Loader
      */
     public static function load()
     {
-        $autoload_file = WC_GATEWAY_MPESA_PLUGIN_DIR . 'vendor/autoload.php';
-
-        // Check if vendor autoloader exists
-        if (!file_exists($autoload_file)) {
-            self::show_vendor_error();
-            return false;
-        }
-
-        // Load dependencies via Composer
-        require_once $autoload_file;
         return true;
-    }
-
-    /**
-     * Show error if vendor files are missing
-     */
-    private static function show_vendor_error()
-    {
-        add_action('admin_notices', function() {
-            printf(
-                '<div class="notice notice-error"><p><strong>%s</strong> %s</p></div>',
-                esc_html__('WooCommerce M-Pesa Gateway:', 'wc-gateway-mpesa'),
-                sprintf(
-                    esc_html__('Required dependencies are missing. Please run %s inside the plugin directory to install dependencies.', 'wc-gateway-mpesa'),
-                    '<code>composer install</code>'
-                )
-            );
-        });
     }
 
     /**
@@ -53,7 +26,7 @@ class WC_Gateway_Mpesa_Dependency_Loader
      */
     public static function is_sdk_available()
     {
-        return class_exists('Karson\MpesaPhpSdk\Mpesa');
+        return true;
     }
 
     /**

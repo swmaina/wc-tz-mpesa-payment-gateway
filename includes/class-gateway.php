@@ -12,13 +12,6 @@ if (!defined('ABSPATH')) {
 class WC_Gateway_Mpesa extends WC_Payment_Gateway
 {
     /**
-     * M-Pesa SDK instance
-     *
-     * @var \Karson\MpesaPhpSdk\Mpesa
-     */
-    private $mpesa_client;
-
-    /**
      * Logger instance
      *
      * @var WC_Logger
@@ -56,9 +49,6 @@ class WC_Gateway_Mpesa extends WC_Payment_Gateway
         // Get logger
         $this->logger = wc_get_logger();
 
-        // Initialize M-Pesa SDK
-        $this->initialize_mpesa_client();
-
         // Actions
         add_action('woocommerce_update_options_payment_gateways_' . $this->id, array($this, 'process_admin_options'));
         add_action('wp_enqueue_scripts', array($this, 'payment_scripts'));
@@ -69,42 +59,10 @@ class WC_Gateway_Mpesa extends WC_Payment_Gateway
     }
 
     /**
-     * Initialize M-Pesa SDK Client
-     */
-    private function initialize_mpesa_client()
-    {
-        if (!WC_Gateway_Mpesa_Dependency_Loader::is_sdk_available()) {
-            $this->logger->error(
-                'M-Pesa SDK not loaded. Ensure dependencies are installed.',
-                array('source' => 'mpesa')
-            );
-            return;
-        }
-
-        try {
-            $this->mpesa_client = new \Karson\MpesaPhpSdk\Mpesa(
-                $this->public_key,
-                $this->api_key,
-                $this->testmode,
-                $this->service_provider
-            );
-        } catch (Exception $e) {
-            $this->logger->error(
-                'M-Pesa initialization error: ' . $e->getMessage(),
-                array('source' => 'mpesa')
-            );
-        }
-    }
-
-    /**
      * Check if the gateway is available
      */
     public function is_available()
     {
-        if (!WC_Gateway_Mpesa_Dependency_Loader::is_sdk_available()) {
-            return false;
-        }
-
         if (empty($this->public_key) || empty($this->api_key) || empty($this->service_provider)) {
             return false;
         }
@@ -342,18 +300,28 @@ class WC_Gateway_Mpesa extends WC_Payment_Gateway
     }
 
     /**
-     * Process M-Pesa payment via SDK
+     * Get M-Pesa API Token
+     */
+    private function get_mpesa_token()
+    {
+        $key = "-----BEGIN PUBLIC KEY-----\n";
+        $key .= wordwrap($this->public_key, 60, "\n", true);
+        $key .= "\n-----END PUBLIC KEY-----";
+
+        $encrypted = '';
+        if (!openssl_public_encrypt($this->api_key, $encrypted, $key, OPENSSL_PKCS1_PADDING)) {
+            throw new Exception(__('Failed to encrypt API key for token generation.', 'wc-gateway-mpesa'));
+        }
+
+        return base64_encode($encrypted);
+    }
+
+    /**
+     * Process M-Pesa payment directly via wp_remote_post
      */
     private function process_mpesa_payment($order, $phone)
     {
         try {
-            if (!$this->mpesa_client) {
-                return array(
-                    'success' => false,
-                    'message' => __('Payment gateway is not properly configured.', 'wc-gateway-mpesa'),
-                );
-            }
-
             $order_id = $order->get_id();
             $amount   = $order->get_total();
 
@@ -361,43 +329,55 @@ class WC_Gateway_Mpesa extends WC_Payment_Gateway
             $transaction_reference = 'WOO-' . $order_id . '-' . time();
             $third_party_reference = 'WOO-' . $order_id;
 
-            // Call M-Pesa C2B API
-            $response = $this->mpesa_client->c2b(
-                $transaction_reference,
-                $phone,
-                (string)$amount,
-                $third_party_reference
-            );
+            $token = $this->get_mpesa_token();
+            $service_provider = $this->testmode ? '171717' : $this->service_provider;
+            $base_uri = $this->testmode ? 'https://api.sandbox.vm.co.mz:18352' : 'https://api.vm.co.mz:18352';
+            $endpoint = $base_uri . '/ipg/v1x/c2bPayment/singleStage/';
 
-            // Check response
-            if ($response->isSuccessful()) {
+            $fields = [
+                "input_TransactionReference" => $transaction_reference,
+                "input_CustomerMSISDN" => $phone,
+                "input_Amount" => (string)$amount,
+                "input_ThirdPartyReference" => $third_party_reference,
+                "input_ServiceProviderCode" => $service_provider
+            ];
+
+            $args = [
+                'headers' => [
+                    'Content-Type'  => 'application/json',
+                    'Authorization' => 'Bearer ' . $token,
+                    'origin'        => 'developer.mpesa.vm.co.mz',
+                    'Connection'    => 'keep-alive',
+                    'User-Agent'    => 'WooCommerce/Mpesa-Gateway'
+                ],
+                'body'      => wp_json_encode($fields),
+                'timeout'   => 45,
+                'sslverify' => false // matches original SDK skipping ssl verify
+            ];
+
+            $response = wp_remote_post($endpoint, $args);
+
+            if (is_wp_error($response)) {
+                throw new Exception($response->get_error_message());
+            }
+
+            $body = wp_remote_retrieve_body($response);
+            $data = json_decode($body, true);
+            $status_code = wp_remote_retrieve_response_code($response);
+
+            if ($status_code >= 200 && $status_code < 300 && isset($data['output_ResponseCode']) && $data['output_ResponseCode'] === 'INS-0') {
                 return array(
                     'success'        => true,
-                    'transaction_id' => $response->getConversationId(),
+                    'transaction_id' => $data['output_ConversationID'] ?? '',
                     'message'        => __('Payment initiated. Please confirm the prompt on your phone.', 'wc-gateway-mpesa'),
                 );
             } else {
+                $error_msg = $data['output_ResponseDesc'] ?? __('Unknown error', 'wc-gateway-mpesa');
                 return array(
                     'success' => false,
-                    'message' => sprintf(
-                        __('Payment failed: %s', 'wc-gateway-mpesa'),
-                        $response->getResponseDescription() ?: __('Unknown error', 'wc-gateway-mpesa')
-                    ),
+                    'message' => sprintf(__('Payment failed: %s', 'wc-gateway-mpesa'), $error_msg),
                 );
             }
-        } catch (\Karson\MpesaPhpSdk\Exceptions\ValidationException $e) {
-            return array(
-                'success' => false,
-                'message' => sprintf(__('Validation error: %s', 'wc-gateway-mpesa'), $e->getMessage()),
-            );
-        } catch (\Karson\MpesaPhpSdk\Exceptions\ApiException $e) {
-            return array(
-                'success' => false,
-                'message' => sprintf(
-                    __('API error: %s', 'wc-gateway-mpesa'),
-                    $e->getResponseDescription() ?: $e->getMessage()
-                ),
-            );
         } catch (Exception $e) {
             return array(
                 'success' => false,
