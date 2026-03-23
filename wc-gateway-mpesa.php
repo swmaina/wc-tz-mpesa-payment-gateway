@@ -3,7 +3,7 @@
  * Plugin Name: WooCommerce M-Pesa Payment Gateway
  * Plugin URI: https://github.com/swmaina/wc-gateway-mpesa
  * Description: Accept M-Pesa payments in your WooCommerce store. Works with Tanzanian and East African M-Pesa providers.
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: MindSafe Solutions
  * Author URI: https://mindsafe.co.ke
  * License: GPL v2 or later
@@ -20,7 +20,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('WC_GATEWAY_MPESA_VERSION', '1.0.0');
+define('WC_GATEWAY_MPESA_VERSION', '1.0.1');
 define('WC_GATEWAY_MPESA_PLUGIN_FILE', __FILE__);
 define('WC_GATEWAY_MPESA_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('WC_GATEWAY_MPESA_PLUGIN_URL', plugin_dir_url(__FILE__));
