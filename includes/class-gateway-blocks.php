@@ -42,14 +42,25 @@ class WC_Gateway_Mpesa_Blocks implements PaymentMethodTypeInterface
         $this->gateway = $gateway;
     }
 
-    /**
-     * Returns the name of the payment method.
-     *
-     * @return string
-     */
     public function get_name()
     {
         return $this->name;
+    }
+
+    /**
+     * Initializes the payment method type.
+     */
+    public function initialize()
+    {
+        // Initialization logic if needed
+    }
+
+    /**
+     * Returns whether the payment method is active.
+     */
+    public function is_active()
+    {
+        return $this->gateway->is_available();
     }
 
     /**
@@ -83,6 +94,16 @@ class WC_Gateway_Mpesa_Blocks implements PaymentMethodTypeInterface
         wp_enqueue_style('wc-gateway-mpesa-blocks-style');
 
         return array('wc-gateway-mpesa-blocks');
+    }
+
+    /**
+     * Returns an array of script dependencies.
+     *
+     * @return array Array of script dependencies.
+     */
+    public function get_payment_method_script_dependencies()
+    {
+        return array();
     }
 
     /**
