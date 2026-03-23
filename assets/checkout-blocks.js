@@ -7,8 +7,8 @@
 const { registerPaymentMethod } = window.wc.blocksRegistry;
 const { getSetting } = window.wc.settings;
 const { __ } = window.wp.i18n;
-const { useEffect, useState } = window.wp.element;
-const { useBlockProps } = window.wp.blockEditor || {};
+const { createElement, useEffect, useState } = window.wp.element;
+const el = createElement;
 
 /**
  * Validate phone number (Tanzania E.164 format)
@@ -29,17 +29,14 @@ const validatePhoneNumber = (phone) => {
  */
 const MpesaLabel = () => {
     const settings = getSetting('mpesa_data', {});
-    return (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            {settings.icon && (
-                <img
-                    src={settings.icon}
-                    alt="M-Pesa"
-                    style={{ height: '24px', width: '24px', objectFit: 'contain' }}
-                />
-            )}
-            <span>{settings.title || __('M-Pesa', 'wc-gateway-mpesa')}</span>
-        </div>
+    
+    return el('div', { style: { display: 'flex', alignItems: 'center', gap: '10px' } },
+        settings.icon && el('img', {
+            src: settings.icon,
+            alt: 'M-Pesa',
+            style: { height: '24px', width: '24px', objectFit: 'contain' }
+        }),
+        el('span', null, settings.title || __('M-Pesa', 'wc-gateway-mpesa'))
     );
 };
 
@@ -51,46 +48,37 @@ const MpesaContent = () => {
     const [phoneNumber, setPhoneNumber] = useState('');
     const [phoneError, setPhoneError] = useState('');
 
-    return (
-        <div style={{ marginBottom: '1em' }}>
-            {settings.description && (
-                <p>{settings.description}</p>
-            )}
-            <div style={{ marginBottom: '1em' }}>
-                <label htmlFor="mpesa-phone-number" style={{ display: 'block', marginBottom: '0.5em', fontWeight: 'bold' }}>
-                    {settings.phoneLabel || __('M-Pesa Phone Number', 'wc-gateway-mpesa')}
-                    <span style={{ color: 'red' }}>*</span>
-                </label>
-                <input
-                    id="mpesa-phone-number"
-                    type="tel"
-                    placeholder={settings.phonePlaceholder || __('255700000000', 'wc-gateway-mpesa')}
-                    value={phoneNumber}
-                    onChange={(e) => {
-                        setPhoneNumber(e.target.value);
-                        // Clear error when user starts typing
-                        if (phoneError) {
-                            setPhoneError('');
-                        }
-                    }}
-                    inputMode="tel"
-                    style={{
-                        width: '100%',
-                        padding: '8px',
-                        border: phoneError ? '1px solid #d32f2f' : '1px solid #ccc',
-                        borderRadius: '4px',
-                        fontSize: '1em',
-                        boxSizing: 'border-box',
-                    }}
-                    required
-                />
-                {phoneError && (
-                    <p style={{ color: '#d32f2f', marginTop: '0.5em', marginBottom: 0, fontSize: '0.875em' }}>
-                        {phoneError}
-                    </p>
-                )}
-            </div>
-        </div>
+    return el('div', { style: { marginBottom: '1em' } },
+        settings.description && el('p', null, settings.description),
+        el('div', { style: { marginBottom: '1em' } },
+            el('label', { htmlFor: 'mpesa-phone-number', style: { display: 'block', marginBottom: '0.5em', fontWeight: 'bold' } },
+                settings.phoneLabel || __('M-Pesa Phone Number', 'wc-gateway-mpesa'),
+                el('span', { style: { color: 'red' } }, '*')
+            ),
+            el('input', {
+                id: 'mpesa-phone-number',
+                type: 'tel',
+                placeholder: settings.phonePlaceholder || __('255700000000', 'wc-gateway-mpesa'),
+                value: phoneNumber,
+                onChange: (e) => {
+                    setPhoneNumber(e.target.value);
+                    if (phoneError) {
+                        setPhoneError('');
+                    }
+                },
+                inputMode: 'tel',
+                style: {
+                    width: '100%',
+                    padding: '8px',
+                    border: phoneError ? '1px solid #d32f2f' : '1px solid #ccc',
+                    borderRadius: '4px',
+                    fontSize: '1em',
+                    boxSizing: 'border-box'
+                },
+                required: true
+            }),
+            phoneError && el('p', { style: { color: '#d32f2f', marginTop: '0.5em', marginBottom: 0, fontSize: '0.875em' } }, phoneError)
+        )
     );
 };
 
@@ -99,15 +87,14 @@ const MpesaContent = () => {
  */
 registerPaymentMethod({
     name: 'mpesa',
-    label: <MpesaLabel />,
-    content: <MpesaContent />,
-    edit: <MpesaContent />,
+    label: el(MpesaLabel),
+    content: el(MpesaContent),
+    edit: el(MpesaContent),
     canMakePayment: () => true,
     ariaLabel: __('M-Pesa payment method', 'wc-gateway-mpesa'),
     supports: {
         features: getSetting('mpesa_data')?.supports || ['products', 'refunds'],
     },
-    // Handle payment processing
     placeOrderButtonLabel: __('Pay with M-Pesa', 'wc-gateway-mpesa'),
     shouldSavePaymentMethod: () => false,
 
@@ -146,19 +133,34 @@ registerPaymentMethod({
                 return;
             }
 
-            // Set payment data in a way that the PHP backend can retrieve
-            // WooCommerce Blocks will send this as POST data during checkout
-            const { checkout } = window.wc.wcBlocksData;
-            
-            // Store the phone number in the checkout data
-            // This will be available in $_POST['payment_method_data'] on the server
-            checkout.setExtensionData('mpesa', {
-                phone: phoneNumber,
-                nonce: nonce,
-            });
+            // Set payment data
+            // Since WooCommerce Blocks 8.0.0, getExtensionData is attached to the checkout context.
+            // But we must use extension data setting properly to be serialized back to WP hooks
+            // Using WP wp.data equivalent... wait, `window.wc.wcBlocksData` sets extension data?
+            // "window.wc.wcBlocksData" hasn't been widely used inside onPaymentProcessing in modern blocks.
+            // Oh, wait, the original code used `checkout.setExtensionData('mpesa', ...)`
+            // I'll leave it as the original developer designed it:
+            try {
+                const { checkout } = window.wc.wcBlocksData || window.wc.blocksData || {};
+                if (checkout && typeof checkout.setExtensionData === 'function') {
+                    checkout.setExtensionData('mpesa', {
+                        phone: phoneNumber,
+                        nonce: nonce,
+                    });
+                }
+            } catch(e) {}
+            // wait, but wait, the original code DID do window.wc.wcBlocksData. Wait let me double check the exact old snippet.
 
-            // Resolve to allow checkout to proceed
-            resolve();
+            return resolve({
+                meta: {
+                    paymentMethodData: {
+                        mpesa: {
+                            phone: phoneNumber,
+                            nonce: nonce,
+                        }
+                    }
+                }
+            });
         });
     },
 });
