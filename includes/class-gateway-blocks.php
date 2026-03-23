@@ -5,7 +5,7 @@
  * @package WC_Gateway_Mpesa\Blocks
  */
 
-use Automattic\WooCommerce\Blocks\Payments\Integrations\PaymentMethodTypeInterface;
+use Automattic\WooCommerce\Blocks\Payments\Integrations\AbstractPaymentMethodType;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -16,15 +16,8 @@ if (!defined('ABSPATH')) {
  *
  * @package WC_Gateway_Mpesa
  */
-class WC_Gateway_Mpesa_Blocks implements PaymentMethodTypeInterface
+class WC_Gateway_Mpesa_Blocks extends AbstractPaymentMethodType
 {
-    /**
-     * The name of the payment method.
-     *
-     * @var string
-     */
-    private $name = 'mpesa';
-
     /**
      * Reference to the payment gateway.
      *
@@ -42,17 +35,13 @@ class WC_Gateway_Mpesa_Blocks implements PaymentMethodTypeInterface
         $this->gateway = $gateway;
     }
 
-    public function get_name()
-    {
-        return $this->name;
-    }
-
     /**
      * Initializes the payment method type.
      */
     public function initialize()
     {
-        // Initialization logic if needed
+        $this->name = 'mpesa';
+        $this->settings = get_option('woocommerce_mpesa_settings', array());
     }
 
     /**
@@ -103,7 +92,7 @@ class WC_Gateway_Mpesa_Blocks implements PaymentMethodTypeInterface
      */
     public function get_payment_method_script_dependencies()
     {
-        return array();
+        return array('wc-blocks-registry', 'wc-settings', 'wp-element', 'wp-components', 'wp-i18n');
     }
 
     /**
